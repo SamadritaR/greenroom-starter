@@ -1,4 +1,6 @@
-<div align="center">
+**📋 Case study submission — Samadrita Roy**
+
+> If you're reviewing my Applied AI PM case study, please start with **[CASE_STUDY.md](./CASE_STUDY.md)** — it covers what I built, how to run it, the exact demo to try, and where to look in the code. The original Greenroom setup instructions below are still valid for general setup.
 
 # Greenroom
 
@@ -6,7 +8,7 @@
 
 This is the starter codebase for the Greenroom Applied AI PM case study.
 
-</div>
+
 
 ---
 
@@ -29,7 +31,7 @@ If you're on Windows, run all the commands below in **Git Bash**, **PowerShell**
 
 Click the **Fork** button at the top right of [https://github.com/samay-cbh/greenroom-starter](https://github.com/samay-cbh/greenroom-starter). You'll get a copy under your own username.
 
-> _Why fork?_ A fork is your own copy of the repo. You'll commit your changes there, and submit your fork's URL when you're done. We can see your commit history that way.
+> *Why fork?* A fork is your own copy of the repo. You'll commit your changes there, and submit your fork's URL when you're done. We can see your commit history that way.
 
 ### 2. Clone your fork to your computer
 
@@ -77,14 +79,16 @@ You'll land on Mariana's home view at The Crescent. **Click "Where to start" in 
 
 You're logged in automatically as **Mariana Reyes**, lead booker at The Crescent (650-cap, Nashville). The product has these surfaces:
 
-| Route | What it is |
-|---|---|
-| `/shows` | Mariana's home view. 24 months of completed shows, searchable and grouped by month. |
-| `/shows/[id]` | Show detail. Deal terms, artist info, ticket sales, expenses, comps. |
-| `/shows/[id]/settle` | The in-app settlement worksheet. **Try it on a few shows.** |
-| `/artists` | Roster of artists who've played the venue, bucketed by frequency. |
-| `/reports` | Aggregate metrics. The numbers Pri (the CEO) is watching. |
-| `/context` | Orientation for you, the candidate. Linked from the sidebar. |
+
+| Route                | What it is                                                                          |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| `/shows`             | Mariana's home view. 24 months of completed shows, searchable and grouped by month. |
+| `/shows/[id]`        | Show detail. Deal terms, artist info, ticket sales, expenses, comps.                |
+| `/shows/[id]/settle` | The in-app settlement worksheet. **Try it on a few shows.**                         |
+| `/artists`           | Roster of artists who've played the venue, bucketed by frequency.                   |
+| `/reports`           | Aggregate metrics. The numbers Pri (the CEO) is watching.                           |
+| `/context`           | Orientation for you, the candidate. Linked from the sidebar.                        |
+
 
 ### Recommended path your first time through
 
@@ -100,16 +104,18 @@ You're logged in automatically as **Mariana Reyes**, lead booker at The Crescent
 
 Twenty-four months of synthetic operational data, designed to feel like a real venue:
 
-| Table | Approx rows | What it represents |
-|---|---|---|
-| `shows` | ~540 | 24 months of shows. The app displays only past shows (more appear as days pass). |
-| `artists` | 59 | Mix of recurring (A-tier, 4+ shows) and one-off (D-tier) acts |
-| `agents` | 14 | Across WME, CAA, Wasserman, Paradigm, and independents |
-| `deals` | ~540 | One per show. Mix is flat ~33%, vs ~33%, % of net ~24%, door ~5%, % of gross ~4% |
-| `ticket_sales` | ~540 | One summary row per show, with realistic sell-through distributions |
-| `comps` | ~1,900 | Comp tickets across 6 categories |
-| `expenses` | ~2,900 | Sound, lights, hospitality, marketing, production, backline |
-| `settlements` | ~540 | All shows have settlement data. Past shows display it; future shows hold it until their date arrives. |
+
+| Table          | Approx rows | What it represents                                                                                    |
+| -------------- | ----------- | ----------------------------------------------------------------------------------------------------- |
+| `shows`        | ~540        | 24 months of shows. The app displays only past shows (more appear as days pass).                      |
+| `artists`      | 59          | Mix of recurring (A-tier, 4+ shows) and one-off (D-tier) acts                                         |
+| `agents`       | 14          | Across WME, CAA, Wasserman, Paradigm, and independents                                                |
+| `deals`        | ~540        | One per show. Mix is flat ~33%, vs ~33%, % of net ~24%, door ~5%, % of gross ~4%                      |
+| `ticket_sales` | ~540        | One summary row per show, with realistic sell-through distributions                                   |
+| `comps`        | ~1,900      | Comp tickets across 6 categories                                                                      |
+| `expenses`     | ~2,900      | Sound, lights, hospitality, marketing, production, backline                                           |
+| `settlements`  | ~540        | All shows have settlement data. Past shows display it; future shows hold it until their date arrives. |
+
 
 A few things worth knowing:
 
@@ -200,9 +206,9 @@ When you're done:
 
 1. **Push your branch.** `git add . && git commit -m "your message" && git push`
 2. **Send the hiring contact:**
-   - The link to your forked repo
-   - Your 3–5 page PRD-quality memo (PDF, Notion, or Google Doc)
-   - A 5–10 minute Loom walking us through the prototype and memo together
+  - The link to your forked repo
+  - Your 3–5 page PRD-quality memo (PDF, Notion, or Google Doc)
+  - A 5–10 minute Loom walking us through the prototype and memo together
 
 ---
 
@@ -217,10 +223,12 @@ Node.js isn't installed (or isn't on your PATH). Install from [nodejs.org](https
 Something else is using port 3000. Two options:
 
 **Stop the other thing first.**
+
 - Mac/Linux: `lsof -ti:3000 | xargs kill -9`
 - Windows: `netstat -ano | findstr :3000` then `taskkill /PID <pid> /F`
 
 **Or run on a different port:**
+
 ```bash
 npm run dev -- -p 3001
 ```
@@ -247,6 +255,7 @@ This drops the SQLite file and regenerates 24 months of data. Takes ~5 seconds. 
 ### Page looks ugly or buttons aren't visible
 
 Hard-refresh your browser to clear the CSS cache:
+
 - Mac: **⌘ + Shift + R**
 - Windows/Linux: **Ctrl + Shift + R**
 
