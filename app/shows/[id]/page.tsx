@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
+  ClipboardPaste,
   FileSpreadsheet,
   AlertCircle,
   Clock,
@@ -119,12 +120,20 @@ export default async function ShowDetailPage({
               </span>
             </div>
           </div>
-          <Link href={`/shows/${show.id}/settle`} className="mt-6 shrink-0">
-            <Button variant="brand" size="lg">
-              <FileSpreadsheet className="h-4 w-4" />
-              {settlement ? "View settlement" : "Settle show"}
-            </Button>
-          </Link>
+          <div className="mt-6 shrink-0 flex flex-col sm:flex-row gap-2">
+            <Link href={`/shows/${show.id}/capture-deal`}>
+              <Button variant="secondary" size="lg" className="w-full sm:w-auto">
+                <ClipboardPaste className="h-4 w-4" />
+                Capture deal
+              </Button>
+            </Link>
+            <Link href={`/shows/${show.id}/settle`}>
+              <Button variant="brand" size="lg" className="w-full sm:w-auto">
+                <FileSpreadsheet className="h-4 w-4" />
+                {settlement ? "View settlement" : "Settle show"}
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Key numbers strip */}

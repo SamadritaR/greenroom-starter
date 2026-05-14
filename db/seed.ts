@@ -28,6 +28,8 @@ import {
   agencies,
   agents,
   artists,
+  clarification,
+  dealCapture,
   shows,
   deals,
   ticketSales,
@@ -159,7 +161,7 @@ const AGENCIES = [
 ];
 
 const AGENT_DEFS = [
-  { id: "agent_sarah_kim", name: "Sarah Kim", agencyId: "agcy_wme", email: "skim@wme.com", preferencesNotes: "One of the easier WME agents. Reads settlements carefully but fairly. Pet peeve: 'Miscellaneous' line items in expenses without itemization." },
+  { id: "agent_sarah_kim", name: "Sarah Kim", agencyId: "agcy_wme", email: "sarah.kim@wme.com", preferencesNotes: "One of the easier WME agents. Reads settlements carefully but fairly. Pet peeve: 'Miscellaneous' line items in expenses without itemization." },
   { id: "agent_daniel_hwang", name: "Daniel Hwang", agencyId: "agcy_wme", email: "dhwang@wme.com", preferencesNotes: "Pushes back hard. Wrote the email thread on the Coastal Spell dispute (March 2025). Tends to ambiguity in deal emails — worth pre-negotiating clarifications." },
   { id: "agent_andrea_pelletier", name: "Andrea Pelletier", agencyId: "agcy_wme", email: "apelletier@wme.com", preferencesNotes: "Negotiates the deals; her colleagues handle settlement." },
   { id: "agent_danny_ortiz", name: "Danny Ortiz", agencyId: "agcy_caa", email: "dortiz@caa.com", preferencesNotes: "Easygoing. Trusts Mariana. Quick to sign off." },
@@ -857,6 +859,8 @@ async function main() {
   await db.delete(comps);
   await db.delete(ticketSales);
   await db.delete(deals);
+  await db.delete(clarification);
+  await db.delete(dealCapture);
   await db.delete(shows);
   await db.delete(artists);
   await db.delete(agents);
@@ -884,6 +888,12 @@ async function main() {
       priorShowCount: rndInt(0, a.recurrence + 2),
     })),
   );
+
+  // Coastal Spell narrative: booker-facing agent for deal capture demos
+  await db
+    .update(artists)
+    .set({ agentId: "agent_sarah_kim" })
+    .where(eq(artists.id, "art_coastal_spell"));
 
   // Build show calendar
   const showsToInsert: (typeof shows.$inferInsert)[] = [];

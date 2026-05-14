@@ -7,7 +7,14 @@
  * in the data but don't have UI here.
  */
 
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  real,
+  uniqueIndex,
+  index,
+} from "drizzle-orm/sqlite-core";
 
 // -------- Users (operator accounts at the venue) --------
 
@@ -281,6 +288,97 @@ export const settlements = sqliteTable("settlements", {
   notes: text("notes"),
 });
 
+// -------- Deal capture (new source of truth after agent confirms) --------
+
+/**
+ * Captures the two-sided deal workflow: pasted agent email → LLM extraction
+ * (with quotes + ambiguity flags) → optional clarification round(s) → agent
+ * confirmation. Confirmed rows are authoritative for new product flows.
+ *
+ * Legacy `deals` is intentionally not updated; coexistence is by design.
+ */
+export const dealCapture = sqliteTable("deal_capture", {
+  id: text("id").primaryKey(),
+  showId: text("show_id")
+    .notNull()
+    .references(() => shows.id),
+
+  status: text("status", {
+    enum: [
+      "draft", // email pasted or in progress; extraction not run / stale
+      "extracted", // LLM output stored in extraction_json
+      "clarification_sent", // Mariana's clarification email recorded (mock send)
+      "awaiting_agent", // waiting for agent reply / confirmation (mock)
+      "confirmed", // agent confirmed; extraction_json is the frozen agreement
+      "voided", // abandoned attempt
+    ],
+  })
+    .notNull()
+    .default("draft"),
+
+  /** Raw email body Mariana pastes from the agent (immutable snapshot). */
+  pastedEmail: text("pasted_email").notNull().default(""),
+
+  /**
+   * Latest structured extraction (terms, source spans, ambiguities w/ $ impact).
+   * After `confirmed`, treat as immutable in app logic.
+   */
+  extractionJson: text("extraction_json"),
+
+  /** When the agent confirmed; null until then. */
+  confirmedAt: integer("confirmed_at", { mode: "timestamp" }),
+
+  createdByUserId: text("created_by_user_id").references(() => users.id),
+
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+}, (t) => ({
+  showIdx: index("deal_capture_show_id_idx").on(t.showId),
+}));
+
+/**
+ * One row per clarification email in the capture thread (prototype: mock send).
+ */
+export const clarification = sqliteTable("clarification", {
+  id: text("id").primaryKey(),
+  dealCaptureId: text("deal_capture_id")
+    .notNull()
+    .references(() => dealCapture.id),
+
+  /** Monotonic per deal_capture (1 = first clarification). */
+  sequence: integer("sequence").notNull(),
+
+  /** Which extraction ambiguity this email addresses (index into extraction JSON). */
+  ambiguityIndex: integer("ambiguity_index").notNull().default(0),
+
+  /** Snapshot of ambiguity.summary when sent. */
+  ambiguitySummary: text("ambiguity_summary").notNull().default(""),
+
+  /** Email body Mariana sends to the agent. */
+  outboundBody: text("outbound_body").notNull(),
+
+  /** Mocked agent reply text for the prototype. */
+  mockInboundReply: text("mock_inbound_reply"),
+
+  /** When the mock agent confirmation was recorded. */
+  resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+
+  /** One-line confirmation shown in UI (e.g. "Confirmed by Sarah Kim, WME, …"). */
+  resolutionNote: text("resolution_note"),
+
+  /** Who recorded the final resolution: agent email thread vs venue self-serve. */
+  resolutionSource: text("resolution_source", {
+    enum: ["agent", "self"],
+  }),
+
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+}, (t) => ({
+  captureSeqUnique: uniqueIndex("clarification_capture_id_sequence_unique").on(
+    t.dealCaptureId,
+    t.sequence,
+  ),
+}));
+
 // -------- Type exports for convenience --------
 
 export type User = typeof users.$inferSelect;
@@ -294,6 +392,8 @@ export type TicketSale = typeof ticketSales.$inferSelect;
 export type Comp = typeof comps.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type Settlement = typeof settlements.$inferSelect;
+export type DealCapture = typeof dealCapture.$inferSelect;
+export type Clarification = typeof clarification.$inferSelect;
 
 // -------- Decoded JSON helpers --------
 

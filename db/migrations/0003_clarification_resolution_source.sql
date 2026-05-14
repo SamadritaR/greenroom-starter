@@ -1,0 +1,1 @@
+ALTER TABLE `clarification` ADD `resolution_source` text;
