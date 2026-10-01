@@ -1,276 +1,112 @@
-**📋 Case study submission — Samadrita Roy**
+# Deal Capture
 
-> If you're reviewing my Applied AI PM case study, please start with **[CASE_STUDY.md](./CASE_STUDY.md)** — it covers what I built, how to run it, the exact demo to try, and where to look in the code. The original Greenroom setup instructions below are still valid for general setup.
+**Catching settlement disputes on Wednesday, when the deal is booked, instead of Friday at 2 a.m. when the show settles.**
 
-# Greenroom
+A working prototype by Samadrita Roy, built on Greenroom, a codebase for independent music venues. Paste an agent's deal email and an LLM extracts the terms, quotes the source line behind each one, and flags every ambiguity with the dollars it puts at risk. The booker resolves each flag before show day, and the confirmed deal becomes the record everyone settles from.
 
-**Software for independent music venues.**
-
-This is the starter codebase for the Greenroom Applied AI PM case study.
-
-
+| | |
+|---|---|
+| Full write up | [CASE_STUDY.md](CASE_STUDY.md) |
+| Product memo | [Samadrita_Roy_Greenroom_Memo.pdf](Samadrita_Roy_Greenroom_Memo.pdf) |
+| Deck | [Samadrita_Greenroom_Deck.pptx](Samadrita_Greenroom_Deck.pptx) (downloads as PowerPoint) |
+| Try it | [Run the demo](#run-the-demo) |
 
 ---
 
-You're looking at a working but mediocre product. It's enough to feel real, but every workflow has gaps. **Your job isn't to fix everything — it's to pick a slice and design it well.** See your case study brief for full instructions.
+## The finding that shaped the build
 
-## Before you start
+All 16 settlements marked "disputed" in the database had artist sign off that read as approval: "Looks good," "ok wire monday," "OK," a thumbs up. By the artist's own words, none of them were disputed. The status field had drifted away from what actually happened, and every report downstream was reading it as fact.
 
-You'll need:
+The drift runs the other way too. Coastal Spell, the March 2025 show at the center of a real marketing recoup fight, is marked `settled`.
 
-1. **Node.js, version 20 or higher** — get it from [nodejs.org](https://nodejs.org/) (pick the LTS version). Verify with `node -v`.
-2. **Git** — most computers have it. Verify with `git --version`. If not, install from [git-scm.com](https://git-scm.com/).
-3. **A code editor.** [VS Code](https://code.visualstudio.com/) is great. [Cursor](https://cursor.com/) is what we'd reach for if we were doing this case study.
-4. **A GitHub account.** Free at [github.com](https://github.com/).
+That set the design rule. The agent's confirmation lives inside the deal record itself, timestamped and attributed to a signer. There is no separate status field left to fall out of sync, so the bug behind those 16 false disputes has nowhere to live.
 
-If you're on Windows, run all the commands below in **Git Bash**, **PowerShell**, or **WSL** — not the legacy Command Prompt.
+## Why deal capture
 
-## Setup, step by step
+Settlement looks like six problems: the math, audit trails, live prediction, the 2 a.m. walkthrough, agent follow up, and disputes. Five of them trace back to one root cause. The deal was never captured in a form both sides agreed on, so by show night nobody is working from the same facts.
 
-### 1. Fork this repo to your own GitHub account
+The data said so before I wrote any code:
 
-Click the **Fork** button at the top right of [https://github.com/samay-cbh/greenroom-starter](https://github.com/samay-cbh/greenroom-starter). You'll get a copy under your own username.
+- 62% of deals at The Crescent fall outside what the app's settle tool can handle.
+- 82% of Greenroom customers, including most of the larger venues, settle in spreadsheets instead.
+- The booker writes deals as prose in `notes_freetext` because the structured fields can't hold what she negotiated.
 
-> *Why fork?* A fork is your own copy of the repo. You'll commit your changes there, and submit your fork's URL when you're done. We can see your commit history that way.
+Four interviews, four different jobs, one answer. The booker said most friction comes from things that were "knowable on Wednesday." The GM wanted to see before a show whether the deal would settle clean. The tour manager said ambiguous terms should be resolved when the deal is negotiated, never at the table. The WME agent asked for one agreed version of the deal in one place.
 
-### 2. Clone your fork to your computer
+## What it does
+
+| Step | What happens |
+|---|---|
+| Paste | The booker pastes the agent's deal email on the show page. |
+| Extract | Llama 3.3 70B (via Groq) returns structured terms, each tied to the exact quote it came from. |
+| Flag | Ambiguities that change money get an amber card with their dollar consequence. Clean terms highlight in blue on the original email. |
+| Resolve | Each flag closes one of two ways: a drafted clarifying email to the agent, or the booker answers it herself. |
+| Confirm | Both paths write to a `clarification` table with a `resolution_source` field, so you always know whether the agent or the venue settled the question. The deal turns green and becomes the source of truth. |
+
+### The Coastal Spell case
+
+The real dispute in the data: "$5,000 vs 80% of net after expenses, expenses capped at $2,500. $900 marketing recoup." Is the $900 inside the cap or outside it? Nobody asked on Wednesday, and it became a $720 fight after the show. Deal Capture flags that exact question at the moment the email is pasted.
+
+## What I left out on purpose
+
+**No settlement calculator.** Math on ambiguous inputs is the situation the venue already lives in. Once inputs are confirmed, the math becomes the easy part.
+
+**No write back to the legacy deals table.** `deal_capture` is the new source of truth. Treating the old fields as reliable would bring back the confusion this build exists to remove.
+
+**No agent app.** Agents live in email. An account, onboarding, and agency permissions would take weeks and change nothing about the idea.
+
+**No 2 a.m. walkthrough or dispute UI.** Both sit downstream of capture. With a confirmed deal, the walkthrough becomes reading a trusted document.
+
+## How I'd know it works
+
+**Backtest first.** Run the extraction across 24 months of `notes_freetext` at The Crescent and match flags against the dispute history. The bar: 70% or more of past disputes trace to an ambiguity the system would have caught. Under 50% means the design needs rework.
+
+**Then one live quarter.** Track time to first clarification sent (does the booker actually use the agent loop) and the post show dispute rate against the prior four quarters. A drop of a third or more earns a multi venue rollout.
+
+The bigger risk is adoption, not accuracy. The booker already abandoned one tool that couldn't handle her deals. This one sits inside a step she already does, pasting the deal, instead of adding a new one.
+
+## Run the demo
+
+You'll need Node.js 20+ and a free [Groq API key](https://console.groq.com).
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/greenroom-starter
-cd greenroom-starter
-```
-
-(Replace `YOUR-USERNAME` with your actual GitHub username.)
-
-### 3. Install dependencies
-
-```bash
+git checkout samadrita-deal-capture
+echo "GROQ_API_KEY=your_key_here" > .env.local
 npm install
-```
-
-This pulls down all the JavaScript packages the project needs. Takes about 60 seconds. You may see a few warnings — those are normal and safe to ignore.
-
-### 4. Start the app
-
-```bash
 npm run dev
 ```
 
-You'll see something like:
+The database ships with seed data and the new migrations already applied.
+
+Open `http://localhost:3000/shows/show_coastal_spell_dispute/capture-deal`, click **Capture deal**, and paste:
 
 ```
-▲ Next.js 16.x
-- Local:   http://localhost:3000
-
-✓ Ready in 1.2s
+$5,000 vs 80% of net after expenses, expenses capped at $2,500. $900 marketing recoup for the Spotify campaign we ran last week. Hospitality per rider.
 ```
 
-### 5. Open it in your browser
+Click **Extract terms**, then **See dollar impact** on the amber card. Harder cases (venue shorthand, walkout pots, a clean flat deal) are in [CASE_STUDY.md](CASE_STUDY.md#try-harder-cases).
 
-Go to **[http://localhost:3000](http://localhost:3000)**.
+## Where to look in the code
 
-You'll land on Mariana's home view at The Crescent. **Click "Where to start" in the sidebar** for an in-product orientation.
+| File | Why it matters |
+|---|---|
+| [`lib/prompts/extract-deal.ts`](lib/prompts/extract-deal.ts) | The system prompt. Five sections: role framing, deal type taxonomy, what counts as a money changing ambiguity, grounded examples, and honest edge case handling. This is what decides extraction quality. |
+| [`lib/deal-capture/extractionSchema.ts`](lib/deal-capture/extractionSchema.ts) | The structured output the model fills. |
+| [`lib/deal-capture/highlightEmail.ts`](lib/deal-capture/highlightEmail.ts) | Maps each source quote back onto the original email. |
+| [`lib/deal-capture/clarificationDraft.ts`](lib/deal-capture/clarificationDraft.ts) | Builds the clarifying email from the quote and the open question. |
+| [`app/shows/[id]/capture-deal/`](app/shows/%5Bid%5D/capture-deal) | The route and client component. |
+| [`app/api/deal-capture/`](app/api/deal-capture) | Extraction, confirmation, clarification, and resolution endpoints. |
+| [`db/schema.ts`](db/schema.ts) | `deal_capture` and `clarification` tables, plus three migrations in `db/migrations/`. |
 
-> **Tip:** Press **⌘K** (Mac) or **Ctrl+K** (Windows/Linux) anywhere in the app to open the command palette — search across shows and artists instantly.
+The clarification email and agent reply are mocked. A real version would send through the venue's outbound email and parse the reply, or use a one click confirm link.
+
+## What I'd ship next
+
+1. A settlement engine that reads the confirmed deal and traces every payout line back to a clause and a receipt.
+2. Real outbound email plus reply parsing.
+3. A magic link confirmation page so the agent confirms without writing a reply.
+4. A dashboard showing ambiguities flagged at capture against disputes that actually happened, across every venue.
 
 ---
 
-## What's running
-
-You're logged in automatically as **Mariana Reyes**, lead booker at The Crescent (650-cap, Nashville). The product has these surfaces:
-
-
-| Route                | What it is                                                                          |
-| -------------------- | ----------------------------------------------------------------------------------- |
-| `/shows`             | Mariana's home view. 24 months of completed shows, searchable and grouped by month. |
-| `/shows/[id]`        | Show detail. Deal terms, artist info, ticket sales, expenses, comps.                |
-| `/shows/[id]/settle` | The in-app settlement worksheet. **Try it on a few shows.**                         |
-| `/artists`           | Roster of artists who've played the venue, bucketed by frequency.                   |
-| `/reports`           | Aggregate metrics. The numbers Pri (the CEO) is watching.                           |
-| `/context`           | Orientation for you, the candidate. Linked from the sidebar.                        |
-
-
-### Recommended path your first time through
-
-1. Open `/context` (the sidebar's "Where to start" link). 5-minute tour.
-2. Then `/shows`. Pick a Vs-deal show. Click **Settle**. See what's broken.
-3. Pick a Flat-deal show. Click **Settle**. See what works.
-4. Read `data/transcripts/*.md` and `data/ceo-memo.md`.
-5. Look at `data/dispute-thread.md`. Then press **⌘K** and search "Coastal Spell" to find the matching show.
-
----
-
-## How the data is shaped
-
-Twenty-four months of synthetic operational data, designed to feel like a real venue:
-
-
-| Table          | Approx rows | What it represents                                                                                    |
-| -------------- | ----------- | ----------------------------------------------------------------------------------------------------- |
-| `shows`        | ~540        | 24 months of shows. The app displays only past shows (more appear as days pass).                      |
-| `artists`      | 59          | Mix of recurring (A-tier, 4+ shows) and one-off (D-tier) acts                                         |
-| `agents`       | 14          | Across WME, CAA, Wasserman, Paradigm, and independents                                                |
-| `deals`        | ~540        | One per show. Mix is flat ~33%, vs ~33%, % of net ~24%, door ~5%, % of gross ~4%                      |
-| `ticket_sales` | ~540        | One summary row per show, with realistic sell-through distributions                                   |
-| `comps`        | ~1,900      | Comp tickets across 6 categories                                                                      |
-| `expenses`     | ~2,900      | Sound, lights, hospitality, marketing, production, backline                                           |
-| `settlements`  | ~540        | All shows have settlement data. Past shows display it; future shows hold it until their date arrives. |
-
-
-A few things worth knowing:
-
-**The deal `notes_freetext` field is the truth.** The structured fields (`guarantee_amount`, `percentage`, `bonuses_json`, `expense_cap`) are filled inconsistently. Mariana enters deals as prose because the structured fields don't model the actual deals well. This mismatch is part of the realism.
-
-**Vs deals come in flavors.** About a third of Vs deals are "standard." The rest mix in walkout pots, tier ratchets, and vs-gross variants. The current in-app tool can't settle most of these.
-
-**Settlements have a lifecycle.** The state machine runs draft → submitted → in_review → signed (or disputed) → revised → finalized → paid → voided.
-
-**Recoups are categorized.** Settlement records carry a `recoups_json` field with line items in categories like `marketing`, `hospitality_overage`, `production_overage`. Each can be `agreed`, `disputed`, or `withdrawn`.
-
----
-
-## A note before you start
-
-Real venue data is messy. Fields drift over time. Prose contradicts structured values. Statuses don't always match the underlying reality. Patterns hide across many shows that look unremarkable in isolation. **What the UI shows you isn't always what the data says — and neither is necessarily what actually happened.**
-
-We'd encourage you to read the data closely, query `data/greenroom.db` directly, and bring skepticism to anything that seems clean. The candidates we hire are the ones who notice that the surface-level view is incomplete.
-
----
-
-## Where to look for context
-
-```
-data/
-├── ceo-memo.md            # Pri's Q4 memo: "winning on completeness, losing on craft"
-├── dispute-thread.md      # The March 2025 marketing-recoup dispute, in full
-├── greenroom.db           # SQLite database — pre-seeded, ready to go
-└── transcripts/
-    ├── mariana.md         # 30-min interview with the booker
-    ├── diego.md           # Tour manager perspective
-    ├── marcus.md          # GM perspective
-    └── sarah-kim.md       # Agent perspective (WME)
-```
-
-These aren't decorative. They contain signals the database deliberately doesn't capture — Mariana's frustrations, the agent's pet peeves, the things that escalate disputes. Mine them.
-
----
-
-## File map
-
-```
-app/
-  context/                  # Candidate orientation page
-  shows/                    # Show list with search + month grouping
-  shows/[id]/               # Show detail (concert poster-style header)
-  shows/[id]/settle/        # The settlement worksheet (hero number layout)
-  artists/                  # Artist roster (card grid with genre dots)
-  reports/                  # Aggregate metrics + craft gap analysis
-  icon.svg                  # Brand favicon
-  opengraph-image.tsx       # Social share image
-components/
-  brand/logo.tsx            # The Greenroom frequency-mark logomark / wordmark
-  command-palette/          # ⌘K global search (shows + artists)
-  ui/                       # Buttons, badges, cards
-  layout/
-    sidebar.tsx             # Fixed sidebar with active nav state
-    nav-links.tsx           # Client component for pathname-aware nav
-lib/
-  dealMath.ts               # The settlement engine (deliberately incomplete)
-  queries.ts                # Server-side data fetching (past shows only)
-  format.ts                 # Money + date helpers
-db/
-  schema.ts                 # All tables, commented
-  seed.ts                   # The 24-month synthetic seed
-  index.ts                  # libsql + Drizzle client
-data/                       # Markdown context + greenroom.db
-```
-
----
-
-## Tech stack
-
-- **Next.js 16** (App Router) + **React 19** + **TypeScript**
-- **Tailwind CSS 4** with shadcn-style component primitives
-- **Drizzle ORM** + **libsql** (pure-JS SQLite — no native compile, no setup)
-- **Fraunces** (variable serif, via `next/font/google`) for display headings
-- **Geist Sans / Mono** (self-hosted via the `geist` package) for body + code
-- **lucide-react** for icons, **date-fns** for dates
-
-Everything is deliberately conventional. Use Cursor, Claude Code, or any other AI tool to navigate and modify the codebase — we expect you to.
-
----
-
-## How to submit
-
-When you're done:
-
-1. **Push your branch.** `git add . && git commit -m "your message" && git push`
-2. **Send the hiring contact:**
-  - The link to your forked repo
-  - Your 3–5 page PRD-quality memo (PDF, Notion, or Google Doc)
-  - A 5–10 minute Loom walking us through the prototype and memo together
-
----
-
-## Troubleshooting
-
-### "Command not found: npm" or "node is not recognized"
-
-Node.js isn't installed (or isn't on your PATH). Install from [nodejs.org](https://nodejs.org/), then restart your terminal.
-
-### "Port 3000 is already in use"
-
-Something else is using port 3000. Two options:
-
-**Stop the other thing first.**
-
-- Mac/Linux: `lsof -ti:3000 | xargs kill -9`
-- Windows: `netstat -ano | findstr :3000` then `taskkill /PID <pid> /F`
-
-**Or run on a different port:**
-
-```bash
-npm run dev -- -p 3001
-```
-
-### "Module not found" or weird build errors
-
-Your `node_modules` is probably corrupt or incomplete. Reset it:
-
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### The database looks empty, or you broke the data while exploring
-
-Reset the database:
-
-```bash
-npm run db:reset
-```
-
-This drops the SQLite file and regenerates 24 months of data. Takes ~5 seconds. Deterministic — same data every time.
-
-### Page looks ugly or buttons aren't visible
-
-Hard-refresh your browser to clear the CSS cache:
-
-- Mac: **⌘ + Shift + R**
-- Windows/Linux: **Ctrl + Shift + R**
-
-### "I want to see what's actually in the database"
-
-```bash
-npm run db:studio
-```
-
-Opens [Drizzle Studio](https://orm.drizzle.team/drizzle-studio/overview) at `local.drizzle.studio` — a visual table browser. You can also open `data/greenroom.db` with any SQLite client (e.g. [TablePlus](https://tableplus.com/), [DBeaver](https://dbeaver.io/), or `sqlite3` CLI).
-
-### Anything else
-
-If you're stuck, email the hiring contact. We'd rather you ask than burn an hour fighting a setup issue.
-
----
-
-Welcome to The Crescent.
+Built on the [Greenroom starter](https://github.com/samay-cbh/greenroom-starter). Original setup and troubleshooting notes live there.
